@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}SignSpeak — Learn ASL Alphabet{% endblock %}
+
+{% block content %}
+<div class="learn-page">
+    <div class="learn-hero">
+        <p class="hero-eyebrow"><span class="eyebrow-dot"></span>Reference Guide</p>
+        <h1 class="hero-title">ASL <span class="gradient-text">Alphabet</span></h1>
+        <p class="hero-sub">26 ASL letters and the SPACE gesture — all actively detected by the Fingerpose classifier. Hover any card to reveal the hand position.</p>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">All Signs</button>
+        <button class="filter-btn" data-filter="letters">Letters</button>
+        <button class="filter-btn" data-filter="phrases">Other</button>
+    </div>
+
+    <div class="asl-grid" id="asl-grid">
+        {% for sign, description in asl_data.items() %}
+        <div class="asl-card {% if sign|length == 1 %}letter-card{% else %}phrase-card{% endif %}"
+             data-type="{% if sign|length == 1 %}letters{% else %}phrases{% endif %}">
+            <div class="card-front">
+                <div class="sign-display">{{ sign }}</div>
+                <div class="sign-label">{% if sign|length == 1 %}Letter {{ sign }}{% else %}{{ sign }}{% endif %}</div>
+            </div>
+            <div class="card-back">
+                <div class="sign-display small">{{ sign }}</div>
+                <p class="sign-desc">{{ description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="tips-section">
+        <h2 class="section-title">Tips for Better Recognition</h2>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <div class="tip-icon">💡</div>
+                <h3>Good Lighting</h3>
+                <p>Ensure your hand is well-lit from the front. Avoid strong backlighting as it creates silhouettes that reduce landmark accuracy.</p>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">📐</div>
+                <h3>Camera Distance</h3>
+                <p>Keep your hand 30–60 cm from the camera. Your full hand and wrist should be clearly visible within the camera frame.</p>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">🖐️</div>
+                <h3>Clear Background</h3>
+                <p>A plain, contrasting background helps MediaPipe detect hand boundaries and track the 21 landmarks more reliably.</p>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">⏱️</div>
+                <h3>Hold Steady</h3>
+                <p>Hold each gesture completely still for the configured duration (default 1.2 seconds) to register it into your sentence.</p>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">⌨️</div>
+                <h3>Keyboard Fallback</h3>
+                <p>No camera? Use the Keyboard Fallback panel on the main screen to type letters directly into the sentence builder.</p>
+            </div>
+            <div class="tip-card">
+                <div class="tip-icon">🔊</div>
+                <h3>Sound Feedback</h3>
+                <p>Enable sound feedback in Gesture Settings to hear a soft click whenever a letter is successfully committed to the sentence.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filter = btn.dataset.filter;
+        document.querySelectorAll('.asl-card').forEach(card => {
+            card.style.display = (filter === 'all' || card.dataset.type === filter) ? 'flex' : 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

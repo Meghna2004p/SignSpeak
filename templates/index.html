@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}SignSpeak — Real-Time ASL Communication{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/fingerpose@0.1.0/dist/fingerpose.min.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── HERO ─────────────────────────────────── -->
+<section class="hero-section">
+    <div class="hero-text">
+        <p class="hero-eyebrow"><span class="eyebrow-dot"></span>ASL Recognition System</p>
+        <h1 class="hero-title">Speak with<br><span class="gradient-text">Your Hands</span></h1>
+        <p class="hero-sub">Real-time American Sign Language recognition via MediaPipe. Build sentences, get instant speech synthesis.</p>
+    </div>
+    <div class="hero-meta">
+        <div class="stat-pill"><strong>27</strong> Gestures</div>
+        <div class="stat-pill"><strong>21</strong> Landmarks</div>
+        <div class="stat-pill"><strong>18</strong> Phrases</div>
+        <!-- Live session stats -->
+        <div class="session-stats-strip">
+            <div class="sstat"><span class="sstat-val" id="stat-letters">0</span><span class="sstat-lbl">Letters</span></div>
+            <div class="sstat-div"></div>
+            <div class="sstat"><span class="sstat-val" id="stat-words">0</span><span class="sstat-lbl">Words</span></div>
+            <div class="sstat-div"></div>
+            <div class="sstat"><span class="sstat-val" id="stat-time">00:00</span><span class="sstat-lbl">Session</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ── MAIN GRID ──────────────────────────────── -->
+<div class="app-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-column">
+
+        <!-- Camera Panel -->
+        <div class="panel camera-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    Live Camera Feed
+                </span>
+                <div class="panel-controls">
+                    <button class="ctrl-btn" id="toggle-landmarks" title="Toggle landmark skeleton">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="toggle-camera" title="Toggle camera">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="fullscreen-btn" title="Fullscreen camera">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="camera-container" id="camera-container">
+                <video id="input-video" autoplay muted playsinline></video>
+                <canvas id="output-canvas"></canvas>
+
+                <!-- Placeholder -->
+                <div class="camera-overlay" id="camera-placeholder">
+                    <div class="placeholder-content">
+                        <div class="cam-anim">
+                            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                        </div>
+                        <p>Position your hand in front of the camera</p>
+                        <button class="start-btn" id="start-camera-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="black"/></svg>
+                            Enable Camera
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Gesture badge -->
+                <div class="gesture-badge" id="gesture-badge">
+                    <span class="gesture-letter" id="detected-letter">—</span>
+                    <div class="gesture-confidence">
+                        <span class="confidence-inner" id="confidence-bar"></span>
+                    </div>
+                </div>
+
+                <!-- Hand count badge -->
+                <div class="hand-badge" id="hand-badge" style="display:none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+                    Hand Detected
+                </div>
+            </div>
+
+            <div class="hint-strip">
+                <span class="hint-label">Detecting:</span>
+                <span class="hint-value" id="current-gesture">Waiting for gesture…</span>
+                <span class="hint-spacer"></span>
+                <span class="hint-label">FPS:</span>
+                <span class="hint-value" id="fps-counter">—</span>
+            </div>
+        </div>
+
+        <!-- Keyboard Fallback Panel -->
+        <div class="panel keyboard-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
+                    Keyboard Fallback
+                </span>
+                <div class="panel-controls">
+                    <button class="ctrl-btn toggle-active" id="kbd-toggle" title="Enable/disable keyboard input">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="keyboard-body">
+                <!-- Alphabet rows -->
+                <div class="key-rows">
+                    <div class="key-row">
+                        <button class="key" data-char="Q">Q</button><button class="key" data-char="W">W</button><button class="key" data-char="E">E</button><button class="key" data-char="R">R</button><button class="key" data-char="T">T</button><button class="key" data-char="Y">Y</button><button class="key" data-char="U">U</button><button class="key" data-char="I">I</button><button class="key" data-char="O">O</button><button class="key" data-char="P">P</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key" data-char="A">A</button><button class="key" data-char="S">S</button><button class="key" data-char="D">D</button><button class="key" data-char="F">F</button><button class="key" data-char="G">G</button><button class="key" data-char="H">H</button><button class="key" data-char="J">J</button><button class="key" data-char="K">K</button><button class="key" data-char="L">L</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key" data-char="Z">Z</button><button class="key" data-char="X">X</button><button class="key" data-char="C">C</button><button class="key" data-char="V">V</button><button class="key" data-char="B">B</button><button class="key" data-char="N">N</button><button class="key" data-char="M">M</button>
+                        <button class="key key-wide" data-action="backspace">⌫</button>
+                    </div>
+                    <div class="key-row">
+                        <button class="key key-punct" data-char=".">.</button>
+                        <button class="key key-punct" data-char=","> ,</button>
+                        <button class="key key-punct" data-char="?">?</button>
+                        <button class="key key-punct" data-char="!">!</button>
+                        <button class="key key-space" data-action="space">SPACE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-column">
+
+        <!-- Sentence Builder -->
+        <div class="panel sentence-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Sentence Builder
+                </span>
+                <div class="panel-controls">
+                    <button class="ctrl-btn" id="undo-btn" title="Undo">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.78"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="backspace-btn" title="Delete last character">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="13" y2="14"/><line x1="13" y1="9" x2="18" y2="14"/></svg>
+                    </button>
+                    <button class="ctrl-btn danger" id="clear-btn" title="Clear all">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sentence-display" id="sentence-display">
+                <span class="placeholder-text">Start signing or type using keyboard…</span>
+            </div>
+
+            <div class="sentence-meta">
+                <span class="meta-item" id="char-count">0 chars</span>
+                <span class="meta-div">·</span>
+                <span class="meta-item" id="word-count-display">0 words</span>
+                <span class="meta-spacer"></span>
+                <!-- Auto-speak toggle -->
+                <label class="toggle-label" title="Auto-speak when sentence ends with . ! ?">
+                    <span>Auto-speak</span>
+                    <span class="toggle-switch">
+                        <input type="checkbox" id="autospeak-toggle">
+                        <span class="toggle-knob"></span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- Punctuation quick pad -->
+            <div class="punct-pad">
+                <button class="punct-btn" data-char=".">.</button>
+                <button class="punct-btn" data-char=","> ,</button>
+                <button class="punct-btn" data-char="?">?</button>
+                <button class="punct-btn" data-char="!">!</button>
+                <button class="punct-btn" data-char=" ">SPACE</button>
+                <button class="punct-btn" data-char="'">′</button>
+            </div>
+
+            <div class="sentence-tools">
+                <button class="tool-btn speak-btn" id="speak-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    Speak
+                </button>
+                <button class="tool-btn repeat-btn" id="repeat-btn" title="Repeat last spoken">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    Repeat
+                </button>
+                <button class="tool-btn copy-btn" id="copy-btn" title="Copy text">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy
+                </button>
+                <button class="tool-btn export-btn" id="export-btn" title="Download transcript">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Hold Settings + Sound Feedback -->
+        <div class="panel hold-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Gesture Settings
+                </span>
+                <button class="ctrl-btn" id="sound-toggle" title="Toggle sound feedback">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
+            </div>
+            <div class="hold-settings">
+                <div class="hold-visual">
+                    <svg class="hold-ring" viewBox="0 0 60 60">
+                        <circle class="ring-bg" cx="30" cy="30" r="25"/>
+                        <circle class="ring-progress" cx="30" cy="30" r="25" id="ring-progress"/>
+                    </svg>
+                    <span class="hold-pct" id="hold-pct">0%</span>
+                </div>
+                <div class="hold-config">
+                    <label class="config-label">Hold Duration</label>
+                    <div class="slider-wrap">
+                        <input type="range" min="500" max="3000" value="1200" step="100" id="hold-duration" class="custom-slider">
+                        <span class="slider-val" id="hold-val">1.2s</span>
+                    </div>
+                    <label class="config-label">Confidence Threshold</label>
+                    <div class="slider-wrap">
+                        <input type="range" min="50" max="95" value="75" step="5" id="conf-threshold" class="custom-slider">
+                        <span class="slider-val" id="conf-val">75%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Phrases -->
+        <div class="panel phrases-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                    Quick Phrases
+                </span>
+            </div>
+            <div class="phrases-grid" id="phrases-grid"></div>
+        </div>
+
+        <!-- Session History -->
+        <div class="panel history-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><polyline points="12 7 12 12 15 15"/></svg>
+                    Session History
+                </span>
+                <button class="ctrl-btn danger" id="clear-history-btn" title="Clear history">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                </button>
+            </div>
+            <div class="history-log" id="history-log">
+                <div class="history-empty">No entries yet — start communicating!</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/gesture.js') }}"></script>
+{% endblock %}
