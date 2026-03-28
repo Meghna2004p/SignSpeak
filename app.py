@@ -58,7 +58,7 @@ COMMON_PHRASES = [
 
 @app.route('/')
 def index():
-    return render_template('leran.html')
+    return render_template('index.html')
 
 @app.route('/learn')
 def learn():
