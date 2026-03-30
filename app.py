@@ -28,11 +28,12 @@ ASL_DESCRIPTIONS = {
     'T': 'Thumb tucked between index and middle fingers',
     'U': 'Index and middle fingers together pointing straight up',
     'V': 'Index and middle fingers spread apart in a V shape',
-   
+    'W': 'Index, middle and ring fingers spread and pointing up',
     'X': 'Index finger hooked or crooked, others curled',
     'Y': 'Thumb and pinky extended out, other fingers folded',
     'Z': 'Index finger extended, motion traces a Z shape',
     'SPACE': 'Open flat hand, all fingers pointing up and spread',
+    'hello':"open flat hand ",
 }
 
 COMMON_PHRASES = [
